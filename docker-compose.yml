@@ -1,0 +1,83 @@
+name: reservation-kafka-lab
+
+# kafka-basic(9092/8080)과 동시에 띄울 수 있게 호스트 포트를 19092/18080/13306 으로 둔다.
+# 컨테이너 이름도 kafka-basic 과 겹치지 않게 rkl- 접두사를 쓴다.
+
+services:
+  kafka:
+    image: confluentinc/cp-kafka:7.8.0
+    container_name: rkl-kafka
+    hostname: kafka
+    ports:
+      - "19092:19092"
+    environment:
+      # --- KRaft (ZooKeeper 없음). broker+controller 한 프로세스 = 개발 전용 ---
+      CLUSTER_ID: "UmVzZXJ2YXRpb25MYWIwMQ"
+      KAFKA_NODE_ID: 1
+      KAFKA_PROCESS_ROLES: "broker,controller"
+      KAFKA_CONTROLLER_QUORUM_VOTERS: "1@kafka:29093"
+      KAFKA_CONTROLLER_LISTENER_NAMES: "CONTROLLER"
+      KAFKA_INTER_BROKER_LISTENER_NAME: "PLAINTEXT"
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: "CONTROLLER:PLAINTEXT,PLAINTEXT:PLAINTEXT,PLAINTEXT_HOST:PLAINTEXT"
+      # 컨테이너끼리는 kafka:29092, 호스트(윈도우)에서는 localhost:19092
+      KAFKA_LISTENERS: "PLAINTEXT://kafka:29092,PLAINTEXT_HOST://0.0.0.0:19092,CONTROLLER://kafka:29093"
+      KAFKA_ADVERTISED_LISTENERS: "PLAINTEXT://kafka:29092,PLAINTEXT_HOST://localhost:19092"
+
+      # --- 단일 노드라 복제 계수를 전부 1로 ---
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+      KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: 1
+      KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: 1
+
+      # --- 관찰을 위해 기본값에서 벗어난 브로커 설정 (프로덕션 금지) ---
+      #   group.initial.rebalance.delay.ms  3s -> 0        컨슈머 재기동이 잦아서 (C2)
+      #   auto.create.topics.enable         true -> false  토픽을 명시적으로 만들어 설정을 눈으로 확인
+      # 이 목록에 없는 브로커 값은 전부 기본값이다.
+      # (session.timeout.ms 등 컨슈머 쪽 튜닝은 app/config.py 의 컨슈머 설정에 있다)
+      KAFKA_GROUP_INITIAL_REBALANCE_DELAY_MS: 0
+      KAFKA_AUTO_CREATE_TOPICS_ENABLE: "false"
+    volumes:
+      - kafka-data:/var/lib/kafka/data
+    healthcheck:
+      test: ["CMD", "kafka-broker-api-versions", "--bootstrap-server", "localhost:19092"]
+      interval: 10s
+      timeout: 10s
+      retries: 12
+      start_period: 20s
+
+  kafka-ui:
+    image: ghcr.io/kafbat/kafka-ui:latest
+    container_name: rkl-kafka-ui
+    ports:
+      - "18080:8080"
+    environment:
+      KAFKA_CLUSTERS_0_NAME: reservation-lab
+      KAFKA_CLUSTERS_0_BOOTSTRAPSERVERS: kafka:29092
+      DYNAMIC_CONFIG_ENABLED: "true"
+    depends_on:
+      kafka:
+        condition: service_healthy
+
+  mysql:
+    image: mysql:8.4
+    container_name: rkl-mysql
+    ports:
+      - "13306:3306"
+    environment:
+      MYSQL_ROOT_PASSWORD: labroot
+      MYSQL_DATABASE: reservation_lab
+      MYSQL_USER: lab
+      MYSQL_PASSWORD: lab
+    volumes:
+      - mysql-data:/var/lib/mysql
+      # 최초 기동 시(빈 볼륨일 때만) db/ 의 .sql 이 순서대로 적용된다
+      - ./db:/docker-entrypoint-initdb.d:ro
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "127.0.0.1", "-plabroot"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+      start_period: 20s
+
+volumes:
+  kafka-data:
+  mysql-data:

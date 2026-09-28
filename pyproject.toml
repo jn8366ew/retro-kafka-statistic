@@ -1,0 +1,28 @@
+[project]
+name = "reservation-kafka-lab"
+version = "0.1.0"
+description = "예약·행사 집계 도메인으로 Kafka 커밋·DLQ·잠금을 실험하는 실습 랩 (dev-scope.md C1~C5)"
+readme = "README.md"
+requires-python = ">=3.11"
+dependencies = [
+    "confluent-kafka>=2.15.1",
+    "pydantic-settings>=2.15.0",
+    # 순수 파이썬 MySQL 드라이버 — Windows 에서 빌드 도구 불필요 (C2 부터 사용)
+    "pymysql>=1.1",
+]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["app"]
+
+[tool.pytest.ini_options]
+pythonpath = ["."]
+testpaths = ["tests"]
+
+[dependency-groups]
+dev = [
+    "pytest>=9.1.1",
+]

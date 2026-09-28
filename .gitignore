@@ -1,0 +1,9 @@
+.venv/
+__pycache__/
+*.pyc
+.pytest_cache/
+.env
+dumps/
+
+# 개인 문서 (로컬 전용)
+docs/
