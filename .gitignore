@@ -1,9 +1,59 @@
+# --- Python ---
 .venv/
 __pycache__/
-*.pyc
+*.py[cod]
 .pytest_cache/
-.env
-dumps/
+*.egg-info/
+build/
+dist/
 
-# 개인 문서 (로컬 전용)
+# --- 로컬 설정·실습 산출물 ---
+.env
+.env.*
+dumps/
+*.log
+
+# --- 개인 문서 (로컬 전용, 공개 문서는 notes/) ---
 docs/
+
+# --- Windows ---
+Thumbs.db
+Thumbs.db:encryptable
+ehthumbs.db
+Desktop.ini
+$RECYCLE.BIN/
+*.lnk
+
+# --- macOS ---
+.DS_Store
+.AppleDouble
+.LSOverride
+._*
+.Spotlight-V100
+.Trashes
+.fseventsd
+
+# --- Linux ---
+*~
+.directory
+.Trash-*
+.nfs*
+
+# --- JetBrains (IntelliJ IDEA, PyCharm) ---
+.idea/
+*.iml
+*.ipr
+*.iws
+out/
+
+# --- VS Code ---
+.vscode/
+*.code-workspace
+.history/
+
+# --- Cursor ---
+.cursor/
+
+# --- 에디터 임시 파일 ---
+*.swp
+*.swo

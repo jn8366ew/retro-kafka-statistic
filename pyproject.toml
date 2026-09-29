@@ -1,7 +1,7 @@
 [project]
 name = "reservation-kafka-lab"
 version = "0.1.0"
-description = "예약·행사 집계 도메인으로 Kafka 커밋·DLQ·잠금을 실험하는 실습 랩 (dev-scope.md C1~C5)"
+description = "예약·행사 집계 도메인으로 Kafka 커밋·DLQ·잠금을 실험하는 실습 랩"
 readme = "README.md"
 requires-python = ">=3.11"
 dependencies = [
