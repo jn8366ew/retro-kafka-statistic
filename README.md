@@ -23,22 +23,42 @@
 
 - **lag 0 은 정상의 증거가 아니다.** 누락과 stale write 는 커밋 위치가 끝까지 가 있어도 생기고, 결과 대조로만 드러난다.
 - **처리 시도 중복 ≠ 금액 중복.** 집계를 절대값으로 재계산하면 재처리는 무해하다.
-- **재처리 멱등성과 동시 쓰기 정합성은 별개다.** 후자는 행사별 잠금이 필요하고, 잠금은 트랜잭션의 첫 조회여야 한다.
-
-
+- **재처리 멱등성과 동시 쓰기 정합성은 별개다.** 후자는 행사별 잠금이 필요하고, 잠금은 트랜잭션의 첫 조회여야 한다 (기본 격리 수준 REPEATABLE READ 기준 — READ COMMITTED 에서는 잠금 뒤 조회가 최신 커밋을 본다).
 
 ## 빠른 시작
 
+필요한 것: Docker, [uv](https://docs.astral.sh/uv/) (Python ≥ 3.11 은 uv 가 받아 준다).
+명령은 Windows PowerShell 기준이지만 `uv run ...` 줄은 OS 와 무관하다.
+
 ```powershell
-docker compose up -d
+docker compose up -d --wait                      # MySQL 스키마 적용이 끝날 때까지 기다린다
 uv sync
-uv run python -m app.admin bootstrap
-uv run python -m app.produce
-uv run python -m app.aggregate --group demo --idle-exit 4
-uv run python -m app.verify --group demo
+uv run python -m app.admin bootstrap             # 토픽 생성
+uv run python -m app.produce                     # 원천 DB 갱신 → 고정 12건 발행
+uv run python -m app.aggregate --group demo --idle-exit 4   # 집계. 4초간 새 메시지가 없으면 종료
+uv run python -m app.verify --group demo         # 판정
 ```
+
+`verify` 의 `verdict` 가 아래처럼 나오면 정상이다. 집계 기대값은 GALA-01 = 20500 / 2건, EXPO-02 = 61000 / 2건.
+
+```json
+"verdict": {
+  "statistics": "OK",
+  "missing_positions": 0,
+  "reprocessed_positions": 0,
+  "commit_caught_up": true
+}
+```
+
+처음부터 다시 하려면 `uv run python -m app.admin reset` (토픽 재생성 + 실습 테이블 비우기, 컨슈머는 먼저 끈다).
+순수 로직 단위 테스트는 `uv run pytest`.
 
 ## 더 보기
 
 - [notes/commands.md](notes/commands.md) — 구성, 디렉터리, 실습별 명령과 실험 인자
 - [notes/results.md](notes/results.md) — C1·C2·C4 실험 결과 표
+
+## 주의
+
+- **개발 전용 구성이다.** 단일 브로커 RF 1, 평문 비밀번호, 관찰을 위해 기본값에서 바꾼 브로커 설정이 들어 있다. 자세한 내용은 `docker-compose.yml` 주석.
+- 코드 주석이 가리키는 `dev-scope.md`, `dev-plan`, 면접 문서는 개인 메모(`docs/`, 저장소에 포함하지 않음)다.
